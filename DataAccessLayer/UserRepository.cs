@@ -30,27 +30,43 @@ namespace DataAccessLayer
             //  GET ALL
             public async Task<IEnumerable<User>> GetAll()
             {
-                return await _context.Users.ToListAsync();
+                return await _context.Users
+                .FromSqlRaw("CALL GetAllUsers()")
+                .ToListAsync();
             }
 
             //  GET BY ID
             public async Task<User?> GetById(int id)
             {
-                return await _context.Users.FindAsync(id);
+                return _context.Users
+                .FromSqlRaw("CALL GetUserById({0})", id)
+                .AsEnumerable()
+                .FirstOrDefault();
             }
 
             //  CREATE
             public async Task Add(User user)
             {
-                _context.Users.Add(user);
-                await _context.SaveChangesAsync();
+            await _context.Database.ExecuteSqlRawAsync(
+                "CALL AddUser({0}, {1}, {2})",
+                user.UserName,
+                user.Password,
+                user.Email
+                );
+            
             }
 
             //  UPDATE
             public async Task Update(User user)
             {
-                _context.Users.Update(user);
-                await _context.SaveChangesAsync();
+            await _context.Database.ExecuteSqlRawAsync(
+                "CALL UpdateUser({0}, {1}, {2}, {3})",
+                user.Id,
+                user.UserName,
+                user.Password,
+                user.Email
+                );
+            
             }
 
             //  DELETE
@@ -59,20 +75,21 @@ namespace DataAccessLayer
                 var user = await _context.Users.FindAsync(id);
                 if (user != null)
                 {
-                    _context.Users.Remove(user);
-                    await _context.SaveChangesAsync();
+                await _context.Database.ExecuteSqlRawAsync(
+                    "CALL DeleteUser({0})", id);
                 }
             }
 
             //  LOGIN
             public async Task<User?> Login(string userName, string password)
             {
-                return await _context.Users
-                    .FirstOrDefaultAsync(x =>
-                        x.UserName == userName &&
-                        x.Password == password); 
+            return _context.Users
+                .FromSqlRaw("CALL sp_Login({0}, {1})", userName, password)
+                .AsEnumerable()
+                .FirstOrDefault();
+
             }
         }
-    }
+}
 
 

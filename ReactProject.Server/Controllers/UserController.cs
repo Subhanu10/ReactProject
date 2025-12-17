@@ -34,7 +34,7 @@ namespace ReactProject.Server.Controllers
         }
 
         // POST: api/user
-        [HttpPost("Create")]
+        [HttpPost("Register")]
         public async Task<IActionResult> Create(User user)
         {
             await _userRepository.Add(user);
