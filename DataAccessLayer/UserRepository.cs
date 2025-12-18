@@ -8,88 +8,104 @@ using System.Threading.Tasks;
 
 namespace DataAccessLayer
 {
-   public  interface IUserRepository
-   {
+    public interface IUserRepository
+    {
         Task<IEnumerable<User>> GetAll();
         Task<User?> GetById(int id);
         Task Add(User user);
         Task Update(User user);
         Task Delete(int id);
         Task<User?> Login(string userName, string password);
+        Task Add(Role role);
+    }
 
-   }    
-        public class UserRepository : IUserRepository
+    public class UserRepository : IUserRepository
+    {
+        private readonly AppDbContext _context;
+
+        public UserRepository(AppDbContext context)
         {
-            private readonly AppDbContext _context;
+            _context = context;
+        }
 
-            public UserRepository(AppDbContext context)
-            {
-                _context = context;
-            }
+        // GET ALL USERS
+        public async Task<IEnumerable<User>> GetAll()
+        {
+            //return await _context.Users
+            //    .FromSqlRaw(@"
+            //        CALL GetAllUsers()
+            //    ")
+            //    .AsNoTracking()
+            //    .ToListAsync();
 
-            //  GET ALL
-            public async Task<IEnumerable<User>> GetAll()
-            {
-                return await _context.Users
-                .FromSqlRaw("CALL GetAllUsers()")
-                .ToListAsync();
-            }
+            return await _context.Users.Include(x => x.Role).ToListAsync();
+                
+        }
 
-            //  GET BY ID
-            public async Task<User?> GetById(int id)
-            {
-                return _context.Users
+        // GET USER BY ID
+        public async Task<User?> GetById(int id)
+        {
+            return await _context.Users
                 .FromSqlRaw("CALL GetUserById({0})", id)
-                .AsEnumerable()
-                .FirstOrDefault();
-            }
+                .AsNoTracking()
+                .FirstOrDefaultAsync();
+        }
 
-            //  CREATE
-            public async Task Add(User user)
-            {
+        // ADD USER
+        public async Task Add(User user)
+        {
             await _context.Database.ExecuteSqlRawAsync(
-                "CALL AddUser({0}, {1}, {2})",
+                "CALL AddUser({0}, {1}, {2}, {3})",
                 user.UserName,
                 user.Password,
-                user.Email
-                );
-            
-            }
+                user.Email,
+                user.RoleId
+            );
+        }
 
-            //  UPDATE
-            public async Task Update(User user)
-            {
+        // UPDATE USER
+        public async Task Update(User user)
+        {
             await _context.Database.ExecuteSqlRawAsync(
-                "CALL UpdateUser({0}, {1}, {2}, {3})",
+                "CALL UpdateUser({0}, {1}, {2}, {3}, {4})",
                 user.Id,
                 user.UserName,
+                user.Email,
                 user.Password,
-                user.Email
-                );
-            
-            }
-
-            //  DELETE
-            public async Task Delete(int id)
-            {
-                var user = await _context.Users.FindAsync(id);
-                if (user != null)
-                {
-                await _context.Database.ExecuteSqlRawAsync(
-                    "CALL DeleteUser({0})", id);
-                }
-            }
-
-            //  LOGIN
-            public async Task<User?> Login(string userName, string password)
-            {
-            return _context.Users
-                .FromSqlRaw("CALL sp_Login({0}, {1})", userName, password)
-                .AsEnumerable()
-                .FirstOrDefault();
-
-            }
+                user.RoleId
+            );
         }
+
+        // DELETE USER
+        public async Task Delete(int id)
+        {
+            await _context.Database.ExecuteSqlRawAsync(
+                "CALL DeleteUser({0})", id
+            );
+        }
+
+        // LOGIN
+        public async Task<User?> Login(string userName, string password)
+        {
+            return await _context.Users
+                .FromSqlRaw("CALL sp_Login({0}, {1})", userName, password)
+                .AsNoTracking()
+                .FirstOrDefaultAsync();
+        }
+
+
+         //ADD ROLE
+        public async Task Add(Role role)
+        {
+            await _context.Database.ExecuteSqlRawAsync(
+                "CALL AddRole({0})",
+                role.RoleName
+            );
+        }
+
+    }
+
 }
+
 
 

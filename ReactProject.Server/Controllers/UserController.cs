@@ -1,13 +1,15 @@
 ﻿using DataAccessLayer;
 using DataAccessLayer.Migrations;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ReactProject.Server.Controllers
 {
+    [Route("api/[controller]")]
+    [ApiController]
     public class UserController : Controller
     {
-
         private readonly IUserRepository _userRepository;
 
         public UserController(IUserRepository userRepository)
@@ -22,60 +24,91 @@ namespace ReactProject.Server.Controllers
             return Ok(users);
         }
 
-        // GET: api/user/5
-        [HttpGet("GetById{id}")]
+        [HttpGet("GetById/{id}")]
         public async Task<IActionResult> GetById(int id)
         {
             var user = await _userRepository.GetById(id);
-            if (user == null)
-                return NotFound();
-
+            if (user == null) return NotFound();
             return Ok(user);
         }
 
-        // POST: api/user
         [HttpPost("Register")]
         public async Task<IActionResult> Create(User user)
         {
-            await _userRepository.Add(user);
-            return Ok("User created successfully");
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            try
+            {
+                await _userRepository.Add(user);
+                return Ok("User created successfully");
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
-        // PUT: api/user/5
-        [HttpPut("Update{id}")]
+        [HttpPut("Update/{id}")]
         public async Task<IActionResult> Update(int id, User user)
         {
-            if (id != user.Id)
-                return BadRequest("Id mismatch");
+            if (id != user.Id) return BadRequest("Id mismatch");
 
-            await _userRepository.Update(user);
-            return Ok("User updated successfully");
+            try
+            {
+                await _userRepository.Update(user);
+                return Ok("User updated successfully");
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
-        // DELETE: api/user/5
-        [HttpDelete("Delete{id}")]
+        [HttpDelete("Delete/{id}")]
         public async Task<IActionResult> Delete(int id)
         {
-            await _userRepository.Delete(id);
-            return Ok("User deleted successfully");
+            try
+            {
+                await _userRepository.Delete(id);
+                return Ok("User deleted successfully");
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
-        // POST: api/user/login
-        [HttpPost("login")]
+        [HttpPost("Login")]
         public async Task<IActionResult> Login(User model)
         {
             var user = await _userRepository.Login(model.UserName, model.Password);
-
-            if (user == null)
-                return Unauthorized("Invalid username or password");
+            if (user == null) return Unauthorized("Invalid username or password");
 
             return Ok(new
             {
                 Message = "Login successfully",
                 user.Id,
                 user.UserName,
-                user.Email
+                user.Email,
+                user.RoleId
             });
         }
+
+        [HttpPost("AddRole")]
+        public async Task<IActionResult> Add(Role role)
+        {
+            try
+            {
+                await _userRepository.Add(role);
+                return Ok("Role created successfully");
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
     }
+
 }
+
+
